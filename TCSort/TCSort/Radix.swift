@@ -10,10 +10,7 @@
 
 import Foundation
  //MARK: - 桶排序
-///
-///
-///
-///
+
 /*
  
  基于比较的排序 最坏时间复杂度下界n·logn
@@ -32,9 +29,9 @@ import Foundation
        │           │
                    █
  T(n,m) = O(m+n)
- 
- 
+
  */
+
 //public
 //indirect enum LinkedList<Element: Comparable> {
 //    case empty
@@ -269,9 +266,9 @@ func radixSort(array: inout [Int]) {
 
  //MARK: - 头插法
 /* 放弃‘///’注释写文档，会导致格式错乱不一致
-  ▓- - -█  █  █  █
+  ▓- - -█─█─█─█
   │     │
   └──█──┘
-     new
+    new
 */
 
