@@ -5,6 +5,8 @@
 //  Created by WangGang on 2019/12/10.
 //  Copyright © 2019 onegoon. All rights reserved.
 //
+//TODO:初始化指定大小指定类型的数组 数组元素是class（引用类型） 初始化数组如果不确定大小，当buffer不够时扩容二倍，这样不断扩容也是性能损耗
+//后续尝试指针方式创建足够大的buffer？
 
 import Foundation
  //MARK: - 桶排序
@@ -26,9 +28,9 @@ import Foundation
  ├───┼───┼───────┼───┼───────┼───┤
  │   │   │ ..... │   │ ..... │   │
  └─┼─┴─┼─┴───────┴─┼─┴───────┴─┼─┘
-   ▓   ▓           ▓           ▓
+   █   █           █           █
        │           │
-                   ▓
+                   █
  T(n,m) = O(m+n)
  
  
@@ -63,11 +65,6 @@ struct Student {
     }
 }
 
-extension Student: Comparable {
-    public static func < (lhs: Student, rhs: Student) -> Bool {
-        return lhs.grade < rhs.grade
-    }
-}
 extension Student: CustomStringConvertible {
     public var description: String {
         return "<" + "name: " + name + " \t" + "grade: " + String(grade) + ">"
@@ -75,42 +72,59 @@ extension Student: CustomStringConvertible {
 }
 
 public
-class Node<T:Comparable> {
+class Node<T> {
     var value: T
-    var next: Node?
+    var next: Node<T>?
     
-    init(value: T) {
+    init(_ value: T, _ next: Node<T>? = nil) {
         self.value = value
+        self.next = next
     }
 }
-
+/// 头结点
 public
-struct LinkedList<T:Comparable> {
-    fileprivate var head: Node<T>? = nil
-    private var tail: Node<T>? = nil
+class HeadNode<T> {
+    var head: Node<T>? = nil
+    weak var tail: Node<T>? = nil
+}
+
+
+/// 单链表
+public
+struct LinkedList<T> {
+    private var first: Node<T>? = nil
+    private weak var last: Node<T>? = nil
     
     public var isEmpty: Bool {
-        return head == nil
+        return first == nil
     }
     
-    public var first: Node<T>? {
-        return head
+    public var head: Node<T>? {
+        return first
     }
     
-    public var last: Node<T>? {
-        return tail
-    }
-    
-    public mutating func append(value: T) {
-        let newNode = Node(value: value)
-        if let tailNode = tail {
-            tailNode.next = newNode
-        } else {
-            head = newNode
-        }
-        tail = newNode
+    public var tail: Node<T>? {
+        return last
     }
         
+    public mutating func append(_ newNode: Node<T>?) {
+//        let newNode = Node(value: value)
+        if let tailNode = last {
+            tailNode.next = newNode
+        } else {
+            first = newNode
+        }
+        last = newNode
+        /// 无法直接确定是单一节点还是链表。 链表去掉封装方法 ？
+        while last?.next != nil {
+            last = last?.next
+        }
+        
+    }
+   
+    public mutating func reHead(_ head: Node<T>?) {
+        first = head
+    }
 }
 
 public
@@ -127,7 +141,7 @@ func bucketSortStudent(array: inout Array<Student>, n: Int) {
 //        buckets.append(LinkedList<Student>())
 //    }
     /* 读入成绩，插入对应的链表 */
-    for student in array { buckets[student.grade].append(value: student) }
+    for student in array { buckets[student.grade].append(Node(student)) }
     /* 输出整个数组的所有链表 */
     var eIdx = 0
     for linkedlist in buckets {
@@ -189,3 +203,74 @@ func bucketSortStudent(array: inout Array<Student>, n: Int) {
  *次位优先LSD，为面值建13个桶，合并结果，再建4个桶
  
  */
+
+let maxDigit = 4
+let radix = 10
+
+/// 获取对应位置的数值
+/// - Parameters:
+///   - value: 给定整数值十进制
+///   - maxDigit: 对应的位置
+///   例子： getDigit(365, at: 2) 得到的数值为3
+func getDigit(_ value: Int, at maxDigit: TCIndex) -> Int {
+    var rlt: Int = value
+    for _ in 0 ..< maxDigit {
+        rlt /= radix
+    }
+    return rlt % radix
+}
+
+/// 链表封装方法 导致复杂度增加,这里使用表头只有头尾两个属性
+public
+func radixSort(array: inout [Int]) {
+    //TODO:优雅的方式？
+    /// 初始化每个桶为空链表
+    var buckets = Array.init(repeating: HeadNode<Int>(), count: radix)
+    for i in 0..<buckets.count { buckets[i] = HeadNode<Int>() }
+    var list: Node<Int>?
+    array.forEach { value in
+        // 头插法
+        let node = Node(value)
+        node.next = list
+        list = node
+    }
+    
+    for d in 0..<maxDigit {
+        while list != nil {
+            let Di = getDigit(list!.value, at: d)
+            let tmp = Node(list!.value)
+            list = list?.next   ///  删除当前结点
+            if buckets[Di].head == nil {
+                buckets[Di].head = tmp
+                buckets[Di].tail = tmp
+            } else {
+                buckets[Di].tail?.next = tmp
+                buckets[Di].tail = tmp
+            }
+        }
+        
+        list = nil
+        for Di in 0..<radix {
+            if  buckets[Di].head != nil {
+                buckets[Di].tail?.next = list
+                list = buckets[Di].head
+                buckets[Di].head = nil   /// 清除 桶对结点的引用
+                buckets[Di].tail = nil
+            }
+        }
+    }
+
+    for i in (0..<array.count).reversed() {
+        array[i] = list?.value ?? 0
+        list = list?.next
+    }
+}
+
+
+ //MARK: - 头插法
+///  ▓- - - - - █  █  █  █
+///  │           │
+///  └─█─┘
+///     new
+
+
