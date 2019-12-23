@@ -217,9 +217,9 @@ func getDigit(_ value: Int, at maxDigit: TCIndex) -> Int {
     return rlt % radix
 }
 
-/// 链表封装方法 导致复杂度增加,这里使用表头只有头尾两个属性
+ //MARK: - 基数排序 - 次位优先
 public
-func radixSort(array: inout [Int]) {
+func LSDRadixSort(array: inout [Int]) {
     //TODO:优雅的方式？
     /// 初始化每个桶为空链表
     var buckets = Array.init(repeating: HeadNode<Int>(), count: radix)
@@ -239,11 +239,10 @@ func radixSort(array: inout [Int]) {
             list = list?.next   ///  删除当前结点
             if buckets[Di].head == nil {
                 buckets[Di].head = tmp
-                buckets[Di].tail = tmp
             } else {
                 buckets[Di].tail?.next = tmp
-                buckets[Di].tail = tmp
             }
+            buckets[Di].tail = tmp
         }
         
         list = nil
@@ -265,10 +264,63 @@ func radixSort(array: inout [Int]) {
 
 
  //MARK: - 头插法
-/* 放弃‘///’注释写文档，会导致格式错乱不一致
+/*
   ▓- - -█─█─█─█
   │     │
   └──█──┘
     new
 */
+
+   //MARK: - 基数排序 - 主位优先 递归实现
+  public
+  func MSDSort(array: inout [Int]) {
+      /** 核心递归函数：对A[L]...A[R]的第D位进行排序  */
+      func MSD(_ array: inout [Int], left: TCIndex, right: TCIndex, D: Int) {
+          guard D >= 0 else { return }
+          var l = 0
+          var r = 0
+          var tmp: Node<Int>?
+              /// 初始化每个桶为空链表
+          var buckets = Array.init(repeating: HeadNode<Int>(), count: radix)
+          for i in 0..<buckets.count { buckets[i] = HeadNode<Int>() }
+          var list: Node<Int>? = nil
+          // 将数组A[L]...A[R]组合成链表
+          for i in left...right {
+              let node = Node(array[i])
+              node.next = list
+              list = node
+          }
+          
+          while list != nil {
+              let Di = getDigit(list!.value, at: D)
+              tmp = Node(list!.value)
+              list = list?.next   ///  删除当前结点
+              if buckets[Di].head == nil {
+                  buckets[Di].head = tmp
+              } else {
+                  buckets[Di].tail?.next = tmp
+              }
+              buckets[Di].tail = tmp
+          }
+          
+          l = left
+          r = left
+          
+          for Di in 0..<radix {
+              if buckets[Di].head != nil {
+                  list = buckets[Di].head
+                  while list != nil {
+                      array[r] = list!.value
+                      r += 1
+                      list = list?.next
+                  }
+  //                print("array:",array,"l:",l,"r:",r,"D:",D-1)
+                  MSD(&array, left: l, right: r-1, D: D-1)
+                  l = r
+              }
+          }
+      }
+      
+      MSD(&array, left: 0, right: array.count-1, D: maxDigit-1)
+  }
 
